@@ -1,0 +1,33 @@
+# Test and backup files (keep main demo files)
+test1.html
+test2.html
+test3.html
+sales-call-original.html
+sales-demo-fixed.html
+
+# Dependencies (will be installed via npm install)
+node_modules/
+
+# IDE and system files
+.vscode/
+.DS_Store
+*.log
+*.tmp
+
+# Backup files
+*.bak
+*.backup
+*~
+
+# Temporary files
+*.temp
+*.cache
+
+# OS generated files
+Thumbs.db
+ehthumbs.db
+
+# IDE files
+.idea/
+*.swp
+*.swo

@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales Call Summary Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .recording { animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .priority-high { border-left: 4px solid #ef4444; }
+        .priority-medium { border-left: 4px solid #f59e0b; }
+        .priority-low { border-left: 4px solid #10b981; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen p-4">
+    <div class="max-w-7xl mx-auto">
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <!-- Header -->
+            <div class="text-center mb-6">
+                <h1 class="text-3xl font-bold text-blue-900 mb-2">💼 Sales Call Summary Generator</h1>
+                <p class="text-gray-600">AI-Powered Sales Conversation Analysis & CRM Data Extraction</p>
+            </div>
+
+            <!-- Controls -->
+            <div class="bg-blue-50 p-6 rounded-lg mb-6">
+                <div class="flex flex-wrap justify-center gap-4 mb-4">
+                    <button id="recordBtn" onclick="toggleRecording()" 
+                            class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition-colors">
+                        🎤 Start Recording Call
+                    </button>
+                    <button onclick="clearAll()" 
+                            class="bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-3 px-6 rounded-lg transition-colors">
+                        🗑️ Clear All
+                    </button>
+                    <button onclick="exportSummary()" 
+                            class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg transition-colors">
+                        📊 Export to CRM
+                    </button>
+                </div>
+                <div id="status" class="text-center text-gray-600">
+                    Ready to record sales call (Chrome/Edge browsers)
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                <!-- Transcription Panel -->
+                <div class="xl:col-span-1 bg-gray-50 p-6 rounded-lg">
+                    <h2 class="text-xl font-semibold mb-4">📞 Call Transcription</h2>
+                    <div id="transcript" class="bg-white p-4 rounded border h-80 overflow-y-auto mb-4">
+                        <div class="text-gray-500 italic">Call transcription will appear here...</div>
+                    </div>
+                    
+                    <!-- Manual Input -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Manual Input</label>
+                        <textarea id="manualText" placeholder="Paste sales call transcript here..." 
+                                  class="w-full px-3 py-2 border rounded-md" rows="4"></textarea>
+                        <button onclick="processText()" 
+                                class="mt-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                            Process Transcript
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Extracted Data Panel -->
+                <div class="xl:col-span-2 space-y-6">
+                    <!-- Lead Information -->
+                    <div class="bg-green-50 p-6 rounded-lg">
+                        <h2 class="text-xl font-semibold mb-4 text-green-900">👤 Lead Information</h2>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Contact Details</label>
+                                <div id="contactInfo" class="bg-white p-3 rounded border min-h-[60px]">
+                                    <div class="text-gray-500 italic">Listening for contact information...</div>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Company & Role</label>
+                                <div id="companyInfo" class="bg-white p-3 rounded border min-h-[60px]">
+                                    <div class="text-gray-500 italic">Listening for company details...</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sales Opportunity -->
+                    <div class="bg-blue-50 p-6 rounded-lg">
+                        <h2 class="text-xl font-semibold mb-4 text-blue-900">💰 Sales Opportunity</h2>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Requirements & Pain Points</label>
+                                <div id="requirements" class="bg-white p-3 rounded border min-h-[80px]">
+                                    <div class="text-gray-500 italic">Listening for customer needs...</div>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Budget & Timeline</label>
+                                <div id="budgetTimeline" class="bg-white p-3 rounded border min-h-[80px]">
+                                    <div class="text-gray-500 italic">Listening for budget and timeline...</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Call Analysis -->
+                    <div class="bg-purple-50 p-6 rounded-lg">
+                        <h2 class="text-xl font-semibold mb-4 text-purple-900">📈 Call Analysis</h2>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Lead Score</label>
+                                <div id="leadScore" class="bg-white p-3 rounded border text-center">
+                                    <div class="text-2xl font-bold text-gray-400">-</div>
+                                    <div class="text-sm text-gray-500">Not calculated</div>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Interest Level</label>
+                                <div id="interestLevel" class="bg-white p-3 rounded border text-center">
+                                    <div class="text-lg font-semibold text-gray-400">Unknown</div>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Next Action</label>
+                                <div id="nextAction" class="bg-white p-3 rounded border">
+                                    <div class="text-gray-500 italic">Will suggest next steps...</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action Items -->
+                    <div class="bg-orange-50 p-6 rounded-lg">
+                        <h2 class="text-xl font-semibold mb-4 text-orange-900">✅ Action Items & Follow-ups</h2>
+                        <div id="actionItems" class="space-y-2">
+                            <div class="text-gray-500 italic">Action items will appear here...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sample Calls -->
+            <div class="mt-8 bg-yellow-50 p-6 rounded-lg">
+                <h3 class="text-lg font-semibold mb-4">🎯 Sample Sales Calls (Click to Test)</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <button onclick="loadSample('discovery')" 
+                            class="text-left p-4 bg-white rounded border hover:bg-gray-50">
+                        <div class="font-semibold">🔍 Discovery Call</div>
+                        <div class="text-sm text-gray-600">Initial prospect qualification</div>
+                    </button>
+                    <button onclick="loadSample('demo')" 
+                            class="text-left p-4 bg-white rounded border hover:bg-gray-50">
+                        <div class="font-semibold">💻 Product Demo</div>
+                        <div class="text-sm text-gray-600">Software demonstration call</div>
+                    </button>
+                    <button onclick="loadSample('negotiation')" 
+                            class="text-left p-4 bg-white rounded border hover:bg-gray-50">
+                        <div class="font-semibold">🤝 Price Negotiation</div>
+                        <div class="text-sm text-gray-600">Closing and pricing discussion</div>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Export Modal -->
+    <div id="exportModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold">📊 CRM Export Summary</h3>
+                <button onclick="closeExportModal()" class="text-gray-500 hover:text-gray-700">✕</button>
+            </div>
+            <div id="exportContent" class="space-y-4"></div>
+            <div class="flex gap-4 mt-6">
+                <button onclick="downloadSummary()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                    📥 Download PDF
+                </button>
+                <button onclick="copySummary()" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
+                    📋 Copy to Clipboard
+                </button>
+                <button onclick="closeExportModal()" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let recognition;
+        let isRecording = false;
+        let extractedData = {
+            contact: {},
+            company: {},
+            requirements: [],
+            budget: {},
+            timeline: {},
+            sentiment: {},
+            actionItems: [],
+            leadScore: 0
+        };
+
+        // Initialize Speech Recognition
+        function initSpeech() {
+            if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+                recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+                recognition.continuous = true;
+                recognition.interimResults = true;
+                recognition.lang = 'en-US';
+
+                recognition.onstart = () => {
+                    isRecording = true;
+                    updateButton();
+                    updateStatus('🎤 Recording sales call - Speak clearly');
+                };
+
+                recognition.onresult = (event) => {
+                    let final = '';
+                    for (let i = event.resultIndex; i < event.results.length; i++) {
+                        if (event.results[i].isFinal) {
+                            final += event.results[i][0].transcript;
+                        }
+                    }
+                    if (final) {
+                        addTranscript(final);
+                        extractSalesInfo(final);
+                    }
+                };
+
+                recognition.onend = () => {
+                    isRecording = false;
+                    updateButton();
+                    updateStatus('✅ Call recording stopped');
+                };
+
+                recognition.onerror = (event) => {
+                    updateStatus('Error: ' + event.error);
+                    isRecording = false;
+                    updateButton();
+                };
+            }
+        }
+
+        function toggleRecording() {
+            if (!recognition) {
+                updateStatus('Speech recognition not supported. Please use manual input.');
+                return;
+            }
+
+            if (isRecording) {
+                recognition.stop();
+            } else {
+                try {
+                    recognition.start();
+                } catch (error) {
+                    updateStatus('Error starting recording: ' + error.message);
+                }
+            }
+        }
+
+        function updateButton() {
+            const btn = document.getElementById('recordBtn');
+            if (isRecording) {
+                btn.textContent = '⏹️ Stop Recording';
+                btn.className = 'bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg transition-colors recording';
+            } else {
+                btn.textContent = '🎤 Start Recording Call';
+                btn.className = 'bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition-colors';
+            }
+        }
+
+        function updateStatus(message) {
+            document.getElementById('status').textContent = message;
+        }
+
+        function addTranscript(text) {
+            const container = document.getElementById('transcript');
+            const div = document.createElement('div');
+            div.className = 'p-2 border-b border-gray-200';
+            div.innerHTML = `<span class="text-xs text-gray-500">${new Date().toLocaleTimeString()}</span><br>${text}`;
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+
+            // Remove placeholder
+            const placeholder = container.querySelector('.text-gray-500.italic');
+            if (placeholder && placeholder.textContent.includes('Call transcription')) {
+                placeholder.remove();
+            }
+        }
+
+        function processText() {
+            const text = document.getElementById('manualText').value.trim();
+            if (text) {
+                addTranscript(text);
+                extractSalesInfo(text);
+                document.getElementById('manualText').value = '';
+                updateStatus('✅ Transcript processed');
+            }
+        }
+
+        function extractSalesInfo(text) {
+            // Extract contact information
+            const nameMatch = text.match(/(?:my name is|I'm|I am)\s+([A-Za-z\s]+?)(?:\s|,|\.)/i);
+            const emailMatch = text.match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
+            const phoneMatch = text.match(/(?:phone|call me at|number is)\s*:?\s*(\d{3}[-.\s]?\d{3}[-.\s]?\d{4})/i);
+
+            if (nameMatch) extractedData.contact.name = nameMatch[1].trim();
+            if (emailMatch) extractedData.contact.email = emailMatch[1];
+            if (phoneMatch) extractedData.contact.phone = phoneMatch[1];
+
+            // Extract company information
+            const companyMatch = text.match(/(?:work at|company|from)\s+([A-Za-z\s&]+?)(?:\s|,|\.)/i);
+            const roleMatch = text.match(/(?:I'm a|I am a|my role is|my title is)\s+([A-Za-z\s]+?)(?:\s|,|\.)/i);
+            const sizeMatch = text.match(/(?:we have|company has|team of)\s*(\d+)\s*(?:people|employees|staff)/i);
+
+            if (companyMatch) extractedData.company.name = companyMatch[1].trim();
+            if (roleMatch) extractedData.company.role = roleMatch[1].trim();
+            if (sizeMatch) extractedData.company.size = sizeMatch[1] + ' employees';
+
+            // Extract requirements and pain points
+            const painPoints = [
+                'problem', 'issue', 'challenge', 'difficulty', 'struggle', 'pain point',
+                'need', 'require', 'looking for', 'want', 'help with'
+            ];
+            
+            const sentences = text.split(/[.!?]+/);
+            sentences.forEach(sentence => {
+                if (painPoints.some(point => sentence.toLowerCase().includes(point))) {
+                    if (!extractedData.requirements.includes(sentence.trim()) && sentence.trim().length > 10) {
+                        extractedData.requirements.push(sentence.trim());
+                    }
+                }
+            });
+
+            // Extract budget information
+            const budgetMatch = text.match(/(?:budget|spend|invest|cost)\s*(?:is|of|around)?\s*\$?(\d+(?:,\d{3})*(?:\.\d{2})?)\s*(?:k|thousand|million)?/i);
+            const timelineMatch = text.match(/(?:by|within|in)\s+(\d+)\s*(days?|weeks?|months?|quarters?)/i);
+
+            if (budgetMatch) {
+                let amount = budgetMatch[1].replace(/,/g, '');
+                if (text.toLowerCase().includes('k') || text.toLowerCase().includes('thousand')) {
+                    amount = parseInt(amount) * 1000;
+                }
+                extractedData.budget.amount = '$' + amount.toLocaleString();
+            }
+            if (timelineMatch) extractedData.timeline.period = timelineMatch[1] + ' ' + timelineMatch[2];
+
+            // Analyze sentiment and interest level
+            const positiveWords = ['interested', 'excited', 'great', 'perfect', 'love', 'amazing', 'excellent'];
+            const negativeWords = ['expensive', 'costly', 'concerned', 'worried', 'problem', 'issue'];
+            const urgentWords = ['urgent', 'asap', 'immediately', 'quickly', 'soon', 'right away'];
+
+            let sentiment = 'neutral';
+            const lowerText = text.toLowerCase();
+            
+            if (positiveWords.some(word => lowerText.includes(word))) sentiment = 'positive';
+            if (negativeWords.some(word => lowerText.includes(word))) sentiment = 'negative';
+            
+            extractedData.sentiment.overall = sentiment;
+            extractedData.sentiment.urgency = urgentWords.some(word => lowerText.includes(word)) ? 'high' : 'medium';
+
+            // Extract action items
+            const actionWords = ['follow up', 'send', 'schedule', 'call back', 'email', 'demo', 'proposal', 'quote'];
+            sentences.forEach(sentence => {
+                if (actionWords.some(action => sentence.toLowerCase().includes(action))) {
+                    if (!extractedData.actionItems.includes(sentence.trim()) && sentence.trim().length > 10) {
+                        extractedData.actionItems.push(sentence.trim());
+                    }
+                }
+            });
+
+            // Calculate lead score
+            calculateLeadScore();
+            updateAllDisplays();
+        }
+
+        function calculateLeadScore() {
+            let score = 0;
+            
+            // Contact completeness (30 points)
+            if (extractedData.contact.name) score += 10;
+            if (extractedData.contact.email) score += 10;
+            if (extractedData.contact.phone) score += 10;
+            
+            // Company info (20 points)
+            if (extractedData.company.name) score += 10;
+            if (extractedData.company.role) score += 10;
+            
+            // Budget (25 points)
+            if (extractedData.budget.amount) score += 25;
+            
+            // Timeline (15 points)
+            if (extractedData.timeline.period) score += 15;
+            
+            // Sentiment (10 points)
+            if (extractedData.sentiment.overall === 'positive') score += 10;
+            else if (extractedData.sentiment.overall === 'neutral') score += 5;
+            
+            extractedData.leadScore = Math.min(score, 100);
+        }
+
+        function updateAllDisplays() {
+            // Update contact info
+            const contactDiv = document.getElementById('contactInfo');
+            if (Object.keys(extractedData.contact).length > 0) {
+                contactDiv.innerHTML = Object.entries(extractedData.contact)
+                    .map(([key, value]) => `<div><strong>${key}:</strong> ${value}</div>`)
+                    .join('');
+            }
+
+            // Update company info
+            const companyDiv = document.getElementById('companyInfo');
+            if (Object.keys(extractedData.company).length > 0) {
+                companyDiv.innerHTML = Object.entries(extractedData.company)
+                    .map(([key, value]) => `<div><strong>${key}:</strong> ${value}</div>`)
+                    .join('');
+            }
+
+            // Update requirements
+            const reqDiv = document.getElementById('requirements');
+            if (extractedData.requirements.length > 0) {
+                reqDiv.innerHTML = extractedData.requirements
+                    .map(req => `<div class="mb-1 p-2 bg-blue-50 rounded">• ${req}</div>`)
+                    .join('');
+            }
+
+            // Update budget and timeline
+            const budgetDiv = document.getElementById('budgetTimeline');
+            let budgetHTML = '';
+            if (extractedData.budget.amount) budgetHTML += `<div><strong>Budget:</strong> ${extractedData.budget.amount}</div>`;
+            if (extractedData.timeline.period) budgetHTML += `<div><strong>Timeline:</strong> ${extractedData.timeline.period}</div>`;
+            if (budgetHTML) budgetDiv.innerHTML = budgetHTML;
+
+            // Update lead score
+            const scoreDiv = document.getElementById('leadScore');
+            const score = extractedData.leadScore;
+            let scoreColor = 'text-red-500';
+            if (score >= 70) scoreColor = 'text-green-500';
+            else if (score >= 40) scoreColor = 'text-yellow-500';
+            
+            scoreDiv.innerHTML = `
+                <div class="text-2xl font-bold ${scoreColor}">${score}</div>
+                <div class="text-sm text-gray-500">out of 100</div>
+            `;
+
+            // Update interest level
+            const interestDiv = document.getElementById('interestLevel');
+            let interest = 'Low';
+            let interestColor = 'text-red-500';
+            
+            if (extractedData.sentiment.overall === 'positive') {
+                interest = 'High';
+                interestColor = 'text-green-500';
+            } else if (extractedData.sentiment.overall === 'neutral') {
+                interest = 'Medium';
+                interestColor = 'text-yellow-500';
+            }
+            
+            interestDiv.innerHTML = `<div class="text-lg font-semibold ${interestColor}">${interest}</div>`;
+
+            // Update next action
+            const actionDiv = document.getElementById('nextAction');
+            let nextAction = 'Follow up call';
+            if (score >= 70) nextAction = 'Send proposal';
+            else if (score >= 40) nextAction = 'Schedule demo';
+            
+            actionDiv.innerHTML = `<div class="font-semibold text-blue-600">${nextAction}</div>`;
+
+            // Update action items
+            const itemsDiv = document.getElementById('actionItems');
+            if (extractedData.actionItems.length > 0) {
+                itemsDiv.innerHTML = extractedData.actionItems
+                    .map((item, index) => {
+                        const priority = index === 0 ? 'priority-high' : 'priority-medium';
+                        return `<div class="p-3 bg-white rounded border ${priority}">
+                            <div class="font-semibold">Action ${index + 1}</div>
+                            <div>${item}</div>
+                        </div>`;
+                    })
+                    .join('');
+            }
+        }
+
+        function loadSample(type) {
+            const samples = {
+                discovery: `Sales Rep: Hi John, thanks for taking the time to speak with me today. Can you tell me a bit about your current challenges?
+
+Prospect: Hi Sarah, my name is John Smith from TechCorp. I'm the VP of Sales and we're a 150-person company. We're really struggling with our current CRM system. It's slow, our team doesn't use it properly, and we're losing track of leads. We need something that can help us manage our pipeline better.
+
+Sales Rep: That sounds frustrating. What's your timeline for making a change?
+
+Prospect: We need to have something in place within 3 months. Our budget is around $50,000 annually. Can you send me some information about your solution?`,
+
+                demo: `Sales Rep: Thanks for joining the demo today, Lisa. Let me show you how our platform works.
+
+Prospect: Great! I'm Lisa Johnson, Marketing Director at GrowthCo. We have about 75 employees. I'm really excited to see this in action. Our main problem is that our marketing and sales teams aren't aligned, and we're wasting leads.
+
+Sales Rep: Perfect, that's exactly what we solve. As you can see here, all your leads flow directly from marketing into the sales pipeline...
+
+Prospect: This looks amazing! The integration capabilities are exactly what we need. What kind of investment are we looking at?
+
+Sales Rep: I'll send you a detailed proposal, but typically for a company your size, it's around $30,000 per year.
+
+Prospect: That's within our budget. Can we schedule a follow-up call next week to discuss implementation?`,
+
+                negotiation: `Sales Rep: Hi Mike, I wanted to follow up on the proposal we sent last week.
+
+Prospect: Hi Sarah, yes I reviewed it with my team. Mike Davis here, CTO at InnovateTech. We're definitely interested, but the price point of $75,000 is a bit higher than we expected. We were hoping for something closer to $60,000.
+
+Sales Rep: I understand your concern. Let me see what I can do. Given that you're looking to implement by the end of this quarter, I might be able to offer a 15% discount if we can move forward this month.
+
+Prospect: That would bring it down to around $63,750, which is much more reasonable. If you can include the premium support package, we have a deal.
+
+Sales Rep: Absolutely! I'll send over the updated contract today. When would be a good time to schedule the kickoff call?`
+            };
+
+            if (samples[type]) {
+                clearAll();
+                addTranscript(samples[type]);
+                extractSalesInfo(samples[type]);
+                updateStatus('✅ Sample call loaded and analyzed');
+            }
+        }
+
+        function clearAll() {
+            document.getElementById('transcript').innerHTML = '<div class="text-gray-500 italic">Call transcription will appear here...</div>';
+            document.getElementById('contactInfo').innerHTML = '<div class="text-gray-500 italic">Listening for contact information...</div>';
+            document.getElementById('companyInfo').innerHTML = '<div class="text-gray-500 italic">Listening for company details...</div>';
+            document.getElementById('requirements').innerHTML = '<div class="text-gray-500 italic">Listening for customer needs...</div>';
+            document.getElementById('budgetTimeline').innerHTML = '<div class="text-gray-500 italic">Listening for budget and timeline...</div>';
+            document.getElementById('leadScore').innerHTML = '<div class="text-2xl font-bold text-gray-400">-</div><div class="text-sm text-gray-500">Not calculated</div>';
+            document.getElementById('interestLevel').innerHTML = '<div class="text-lg font-semibold text-gray-400">Unknown</div>';
+            document.getElementById('nextAction').innerHTML = '<div class="text-gray-500 italic">Will suggest next steps...</div>';
+            document.getElementById('actionItems').innerHTML = '<div class="text-gray-500 italic">Action items will appear here...</div>';
+            
+            extractedData = {
+                contact: {},
+                company: {},
+                requirements: [],
+                budget: {},
+                timeline: {},
+                sentiment: {},
+                actionItems: [],
+                leadScore: 0
+            };
+            
+            updateStatus('All data cleared');
+        }
+
+        function exportSummary() {
+            const content = generateExportContent();
+            document.getElementById('exportContent').innerHTML = content;
+            document.getElementById('exportModal').classList.remove('hidden');
+        }
+
+        function generateExportContent() {
+            const today = new Date().toLocaleDateString();
+            
+            return `
+                <div class="space-y-4">
+                    <div class="bg-blue-50 p-4 rounded">
+                        <h4 class="font-bold text-blue-900 mb-2">📞 Call Summary - ${today}</h4>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div><strong>Lead Score:</strong> ${extractedData.leadScore}/100</div>
+                            <div><strong>Interest Level:</strong> ${extractedData.sentiment.overall || 'Unknown'}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-green-50 p-4 rounded">
+                        <h4 class="font-bold text-green-900 mb-2">👤 Contact Information</h4>
+                        ${Object.entries(extractedData.contact).map(([key, value]) => 
+                            `<div><strong>${key}:</strong> ${value}</div>`
+                        ).join('') || '<div class="text-gray-500">No contact info extracted</div>'}
+                    </div>
+                    
+                    <div class="bg-purple-50 p-4 rounded">
+                        <h4 class="font-bold text-purple-900 mb-2">🏢 Company Details</h4>
+                        ${Object.entries(extractedData.company).map(([key, value]) => 
+                            `<div><strong>${key}:</strong> ${value}</div>`
+                        ).join('') || '<div class="text-gray-500">No company info extracted</div>'}
+                    </div>
+                    
+                    <div class="bg-yellow-50 p-4 rounded">
+                        <h4 class="font-bold text-yellow-900 mb-2">💰 Opportunity Details</h4>
+                        ${extractedData.budget.amount ? `<div><strong>Budget:</strong> ${extractedData.budget.amount}</div>` : ''}
+                        ${extractedData.timeline.period ? `<div><strong>Timeline:</strong> ${extractedData.timeline.period}</div>` : ''}
+                        ${!extractedData.budget.amount && !extractedData.timeline.period ? '<div class="text-gray-500">No budget/timeline info</div>' : ''}
+                    </div>
+                    
+                    <div class="bg-orange-50 p-4 rounded">
+                        <h4 class="font-bold text-orange-900 mb-2">✅ Next Actions</h4>
+                        ${extractedData.actionItems.length > 0 ? 
+                            extractedData.actionItems.map((item, i) => `<div>${i+1}. ${item}</div>`).join('') :
+                            '<div class="text-gray-500">No action items identified</div>'
+                        }
+                    </div>
+                </div>
+            `;
+        }
+
+        function closeExportModal() {
+            document.getElementById('exportModal').classList.add('hidden');
+        }
+
+        function downloadSummary() {
+            window.print();
+        }
+
+        function copySummary() {
+            const content = document.getElementById('exportContent').innerText;
+            navigator.clipboard.writeText(content).then(() => {
+                alert('Summary copied to clipboard!');
+            });
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            initSpeech();
+            updateStatus('Ready to record sales call');
+        });
+    </script>
+</body>
+</html>
