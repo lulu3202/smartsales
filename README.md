@@ -63,7 +63,8 @@ Open `sales-call-transcriber.html` in Chrome or Edge browser to try the applicat
 
 ## 🔗 Open Source Repository
 
-**Repository URL**: [GitHub Repository Link - To be provided]
+**Repository URL**: https://github.com/lulu3202/smartsales.git
+**Youtube Demo Link**: https://www.youtube.com/watch?v=gllpPviDq5I
 
 **License**: MIT License (OSI Approved)
 
@@ -140,12 +141,6 @@ Kiro enabled the creation of an enterprise-quality sales productivity tool that 
 - **Data Quality**: Consistent, structured CRM data capture
 - **Lead Qualification**: Automated 0-100 scoring system
 - **Sales Productivity**: Focus on selling, not note-taking
-
-## 🎥 Demo Script
-
-For live demonstrations, use this simple script:
-
-_"Hello. My name is John Smith from ABC Company. I am the Sales Manager. We have fifty people. We need help with our sales system. Our budget is fifty thousand dollars. We want to buy something in three months. Please send me information."_
 
 ## 📄 License
 
